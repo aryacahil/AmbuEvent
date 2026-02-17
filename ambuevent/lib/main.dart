@@ -1,130 +1,208 @@
 import 'package:flutter/material.dart';
-import 'firebase_options.dart';
+import 'dart:async';
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  
-  var Firebase;
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+// Import Screen dan Widget yang sudah dipisah
+import 'widgets/bottom_nav.dart';
+import 'screens/auth_screens.dart';
+import 'screens/home_screen.dart';
+import 'screens/user_screens.dart';
+import 'screens/admin_screens.dart';
 
+void main() {
   runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-  // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
+      title: 'PSC 119 Event Medic',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        primarySwatch: Colors.red,
+        scaffoldBackgroundColor: const Color(0xFFF3F4F6),
+        fontFamily: 'Roboto',
+        useMaterial3: true,
       ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      home: const MainAppController(),
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
-
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+class MainAppController extends StatefulWidget {
+  const MainAppController({super.key});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<MainAppController> createState() => _MainAppControllerState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+class _MainAppControllerState extends State<MainAppController> {
+  String currentScreen = 'welcome';
+  String userRole = 'user'; 
+  String bookingState = 'idle';
+  
+  // Data State
+  String eventType = 'Konser';
+  final TextEditingController _eventNameController = TextEditingController();
+  final TextEditingController _eventDateController = TextEditingController();
+  final TextEditingController _eventLocController = TextEditingController();
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+  // Mock Data
+  List<Map<String, dynamic>> historyList = [
+    {'id': 1, 'date': '20 Mar 2026', 'eventName': 'Konser Musik Jazz', 'type': 'Konser', 'status': 'Terkonfirmasi', 'driver': 'Budi Supir', 'plate': 'B 1234 PSC'},
+    {'id': 2, 'date': '15 Feb 2026', 'eventName': 'Marathon Jakarta', 'type': 'Olahraga', 'status': 'Selesai', 'driver': 'Joko', 'plate': 'B 9999 DAR'},
+  ];
+
+  List<Map<String, dynamic>> usersList = [
+    {'id': 1, 'name': 'Budi Supir', 'email': 'budi@psc.com', 'role': 'admin'},
+    {'id': 2, 'name': 'Rafi Putra', 'email': 'rafi@gmail.com', 'role': 'user'},
+  ];
+
+  List<Map<String, dynamic>> ambulancesList = [
+    {'id': 1, 'plate': 'B 1234 PSC', 'driver': 'Budi Supir', 'status': 'Tersedia'},
+    {'id': 2, 'plate': 'B 9999 DAR', 'driver': 'Joko', 'status': 'Booked Event'},
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    Future.delayed(const Duration(seconds: 3), () {
+      if (currentScreen == 'welcome') {
+        setState(() => currentScreen = 'login');
+      }
     });
   }
 
+  // --- Actions ---
+  void handleLogin(String role) {
+    setState(() {
+      userRole = role;
+      currentScreen = 'home';
+    });
+  }
+
+  void startBooking() => setState(() => bookingState = 'form');
+
+  void confirmBooking() {
+    setState(() {
+      bookingState = 'searching';
+      currentScreen = 'map';
+    });
+
+    Future.delayed(const Duration(seconds: 3), () {
+      setState(() {
+        bookingState = 'booked';
+        historyList.insert(0, {
+          'id': DateTime.now().millisecondsSinceEpoch,
+          'date': _eventDateController.text.isEmpty ? 'Hari Ini' : _eventDateController.text,
+          'eventName': _eventNameController.text.isEmpty ? 'Event Baru' : _eventNameController.text,
+          'type': eventType,
+          'status': 'Menunggu Konfirmasi',
+          'driver': '-',
+          'plate': '-'
+        });
+      });
+    });
+  }
+
+  void cancelBooking() {
+    if (bookingState == 'booked' && historyList.isNotEmpty) {
+      if (historyList[0]['status'] == 'Menunggu Konfirmasi') {
+        historyList[0]['status'] = 'Dibatalkan';
+      }
+    }
+    setState(() {
+      bookingState = 'idle';
+      _eventNameController.clear();
+      _eventDateController.clear();
+      _eventLocController.clear();
+      currentScreen = 'home';
+    });
+  }
+
+  // --- CRUD Actions ---
+  void addUser(Map<String, dynamic> user) => setState(() => usersList.add(user));
+  void deleteUser(int id) => setState(() => usersList.removeWhere((u) => u['id'] == id));
+  void addAmbulance(Map<String, dynamic> amb) => setState(() => ambulancesList.add(amb));
+  void deleteAmbulance(int id) => setState(() => ambulancesList.removeWhere((a) => a['id'] == id));
+
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+      resizeToAvoidBottomInset: false, 
+      body: Stack(
+        children: [
+          _buildScreen(),
+          if (['home', 'map', 'history', 'menu'].contains(currentScreen))
+            Positioned(
+              bottom: 0, left: 0, right: 0,
+              child: BottomNav(
+                currentScreen: currentScreen,
+                onTab: (screen) => setState(() => currentScreen = screen),
+              ),
             ),
-          ],
-        ),
+        ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
     );
+  }
+
+  Widget _buildScreen() {
+    switch (currentScreen) {
+      case 'welcome':
+        return const WelcomeScreen();
+      case 'login':
+        return LoginScreen(onLogin: handleLogin);
+      case 'signup':
+        return SignupScreen(onToLogin: () => setState(() => currentScreen = 'login'));
+      case 'home':
+        return HomeScreen(
+          role: userRole,
+          bookingState: bookingState,
+          onStartBooking: startBooking,
+          onCancelForm: () => setState(() => bookingState = 'idle'),
+          onConfirmBooking: confirmBooking,
+          eventType: eventType,
+          onEventTypeChanged: (val) => setState(() => eventType = val),
+          nameCtrl: _eventNameController,
+          dateCtrl: _eventDateController,
+          locCtrl: _eventLocController,
+          onGoToAdminUser: () => setState(() => currentScreen = 'adminUsers'),
+          onGoToAdminAmb: () => setState(() => currentScreen = 'adminAmbulances'),
+          onGoToMap: () => setState(() => currentScreen = 'map'),
+        );
+      case 'map':
+        return MapScreen(
+          bookingState: bookingState,
+          eventName: _eventNameController.text,
+          eventDate: _eventDateController.text,
+          eventLoc: _eventLocController.text,
+          onCancel: cancelBooking,
+        );
+      case 'history':
+        return HistoryScreen(history: historyList);
+      case 'menu':
+        return MenuScreen(onLogout: () => setState(() {
+          currentScreen = 'welcome';
+          bookingState = 'idle';
+        }));
+      case 'adminUsers':
+        return AdminUserScreen(
+          users: usersList,
+          onBack: () => setState(() => currentScreen = 'home'),
+          onAdd: addUser,
+          onDelete: deleteUser,
+        );
+      case 'adminAmbulances':
+        return AdminAmbulanceScreen(
+          ambulances: ambulancesList,
+          onBack: () => setState(() => currentScreen = 'home'),
+          onAdd: addAmbulance,
+          onDelete: deleteAmbulance,
+        );
+      default:
+        return const Center(child: Text("Screen not found"));
+    }
   }
 }
