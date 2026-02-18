@@ -1,14 +1,23 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-// Import Screen dan Widget yang sudah dipisah
+import 'firebase_options.dart';
+import 'service/auth_service.dart';
+import 'models/user_models.dart';
 import 'widgets/bottom_nav.dart';
+import 'widgets/loading_widget.dart';
 import 'screens/auth_screens.dart';
 import 'screens/home_screen.dart';
 import 'screens/user_screens.dart';
 import 'screens/admin_screens.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const MyApp());
 }
 
@@ -26,23 +35,74 @@ class MyApp extends StatelessWidget {
         fontFamily: 'Roboto',
         useMaterial3: true,
       ),
-      home: const MainAppController(),
+      home: const AuthWrapper(),
+    );
+  }
+}
+
+// Cek status login dulu sebelum masuk app
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Masih loading
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const LoadingWidget(message: 'Memuat...');
+        }
+        // Belum login → ke Welcome/Login
+        if (!snapshot.hasData || snapshot.data == null) {
+          return const MainAppController(isLoggedIn: false);
+        }
+        // Sudah login → ambil data role dari Firestore
+        return FutureBuilder<UserModel?>(
+          future: AuthService().getUserData(snapshot.data!.uid),
+          builder: (context, userSnapshot) {
+            if (userSnapshot.connectionState == ConnectionState.waiting) {
+              return const LoadingWidget(message: 'Memuat profil...');
+            }
+            if (userSnapshot.data == null) {
+              AuthService().signOut();
+              return const MainAppController(isLoggedIn: false);
+            }
+            // Masuk app dengan role dari Firestore
+            return MainAppController(
+              isLoggedIn: true,
+              initialRole: userSnapshot.data!.role,
+              loggedInUser: userSnapshot.data!,
+            );
+          },
+        );
+      },
     );
   }
 }
 
 class MainAppController extends StatefulWidget {
-  const MainAppController({super.key});
+  final bool isLoggedIn;
+  final String initialRole;
+  final UserModel? loggedInUser;
+
+  const MainAppController({
+    super.key,
+    this.isLoggedIn = false,
+    this.initialRole = 'user',
+    this.loggedInUser,
+  });
 
   @override
   State<MainAppController> createState() => _MainAppControllerState();
 }
 
 class _MainAppControllerState extends State<MainAppController> {
-  String currentScreen = 'welcome';
-  String userRole = 'user'; 
+  late String currentScreen;
+  late String userRole;
   String bookingState = 'idle';
-  
+  UserModel? _currentUser;
+
   // Data State
   String eventType = 'Konser';
   final TextEditingController _eventNameController = TextEditingController();
@@ -68,17 +128,29 @@ class _MainAppControllerState extends State<MainAppController> {
   @override
   void initState() {
     super.initState();
-    Future.delayed(const Duration(seconds: 3), () {
-      if (currentScreen == 'welcome') {
-        setState(() => currentScreen = 'login');
-      }
-    });
+    _currentUser = widget.loggedInUser;
+
+    if (widget.isLoggedIn) {
+      // Sudah login → langsung ke home
+      currentScreen = 'home';
+      userRole = widget.initialRole;
+    } else {
+      // Belum login → mulai dari welcome
+      currentScreen = 'welcome';
+      userRole = 'user';
+      Future.delayed(const Duration(seconds: 3), () {
+        if (mounted && currentScreen == 'welcome') {
+          setState(() => currentScreen = 'login');
+        }
+      });
+    }
   }
 
   // --- Actions ---
-  void handleLogin(String role) {
+  void handleLogin(String role, {UserModel? user}) {
     setState(() {
       userRole = role;
+      _currentUser = user;
       currentScreen = 'home';
     });
   }
@@ -90,20 +162,21 @@ class _MainAppControllerState extends State<MainAppController> {
       bookingState = 'searching';
       currentScreen = 'map';
     });
-
     Future.delayed(const Duration(seconds: 3), () {
-      setState(() {
-        bookingState = 'booked';
-        historyList.insert(0, {
-          'id': DateTime.now().millisecondsSinceEpoch,
-          'date': _eventDateController.text.isEmpty ? 'Hari Ini' : _eventDateController.text,
-          'eventName': _eventNameController.text.isEmpty ? 'Event Baru' : _eventNameController.text,
-          'type': eventType,
-          'status': 'Menunggu Konfirmasi',
-          'driver': '-',
-          'plate': '-'
+      if (mounted) {
+        setState(() {
+          bookingState = 'booked';
+          historyList.insert(0, {
+            'id': DateTime.now().millisecondsSinceEpoch,
+            'date': _eventDateController.text.isEmpty ? 'Hari Ini' : _eventDateController.text,
+            'eventName': _eventNameController.text.isEmpty ? 'Event Baru' : _eventNameController.text,
+            'type': eventType,
+            'status': 'Menunggu Konfirmasi',
+            'driver': '-',
+            'plate': '-',
+          });
         });
-      });
+      }
     });
   }
 
@@ -128,10 +201,29 @@ class _MainAppControllerState extends State<MainAppController> {
   void addAmbulance(Map<String, dynamic> amb) => setState(() => ambulancesList.add(amb));
   void deleteAmbulance(int id) => setState(() => ambulancesList.removeWhere((a) => a['id'] == id));
 
+  // Logout
+  void handleLogout() async {
+    await AuthService().signOut();
+    if (mounted) {
+      setState(() {
+        currentScreen = 'welcome';
+        bookingState = 'idle';
+        _currentUser = null;
+        userRole = 'user';
+        // Kembali ke welcome lalu login setelah 3 detik
+        Future.delayed(const Duration(seconds: 3), () {
+          if (mounted && currentScreen == 'welcome') {
+            setState(() => currentScreen = 'login');
+          }
+        });
+      });
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: false, 
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
           _buildScreen(),
@@ -153,9 +245,14 @@ class _MainAppControllerState extends State<MainAppController> {
       case 'welcome':
         return const WelcomeScreen();
       case 'login':
-        return LoginScreen(onLogin: handleLogin);
+        return LoginScreen(
+          onLogin: handleLogin,
+          onToSignup: () => setState(() => currentScreen = 'signup'),
+        );
       case 'signup':
-        return SignupScreen(onToLogin: () => setState(() => currentScreen = 'login'));
+        return SignupScreen(
+          onToLogin: () => setState(() => currentScreen = 'login'),
+        );
       case 'home':
         return HomeScreen(
           role: userRole,
@@ -183,10 +280,12 @@ class _MainAppControllerState extends State<MainAppController> {
       case 'history':
         return HistoryScreen(history: historyList);
       case 'menu':
-        return MenuScreen(onLogout: () => setState(() {
-          currentScreen = 'welcome';
-          bookingState = 'idle';
-        }));
+        return MenuScreen(
+          onLogout: handleLogout,
+          userName: _currentUser?.name ?? 'Pengguna',
+          userEmail: _currentUser?.email ?? '',
+          userPhoto: _currentUser?.photoUrl ?? '',
+        );
       case 'adminUsers':
         return AdminUserScreen(
           users: usersList,

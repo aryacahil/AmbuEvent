@@ -1,7 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/user_model.dart';
+import '../models/user_models.dart';
 
 class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -10,11 +10,69 @@ class AuthService {
 
   final List<String> _adminEmails = [
     'campgreget2@gmail.com',
+    'rafiputraadipratama4@gmail.com'
   ];
 
   Stream<User?> get authStateChanges => _auth.authStateChanges();
   User? get currentUser => _auth.currentUser;
 
+  // === LOGIN DENGAN EMAIL & PASSWORD ===
+  Future<UserModel?> signInWithEmail(String email, String password) async {
+    try {
+      final UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final User? user = result.user;
+      if (user == null) return null;
+
+      // Ambil data user dari Firestore
+      return await getUserData(user.uid);
+    } catch (e) {
+      print('Error sign in with email: $e');
+      return null;
+    }
+  }
+
+  // === REGISTER DENGAN EMAIL & PASSWORD ===
+  Future<UserModel?> registerWithEmail(
+    String email,
+    String password,
+    String name,
+  ) async {
+    try {
+      final UserCredential result = await _auth.createUserWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final User? user = result.user;
+      if (user == null) return null;
+
+      // Update display name
+      await user.updateDisplayName(name);
+
+      // Tentukan role
+      final String role = _adminEmails.contains(email) ? 'admin' : 'user';
+
+      // Simpan ke Firestore
+      final newUser = UserModel(
+        uid: user.uid,
+        email: email,
+        name: name,
+        photoUrl: '',
+        role: role,
+        createdAt: DateTime.now(),
+      );
+      await _firestore.collection('users').doc(user.uid).set(newUser.toMap());
+
+      return newUser;
+    } catch (e) {
+      print('Error register: $e');
+      return null;
+    }
+  }
+
+  // === LOGIN DENGAN GOOGLE ===
   Future<UserModel?> signInWithGoogle() async {
     try {
       final GoogleSignInAccount? googleUser = await _googleSignIn.signIn();
@@ -34,7 +92,7 @@ class AuthService {
       if (user == null) return null;
 
       final String role =
-          _adminEmails.contains(user.email) ? 'admin' : 'pelanggan';
+          _adminEmails.contains(user.email) ? 'admin' : 'user';
 
       final docRef = _firestore.collection('users').doc(user.uid);
       final docSnapshot = await docRef.get();
@@ -54,11 +112,12 @@ class AuthService {
         return UserModel.fromMap(docSnapshot.data()!);
       }
     } catch (e) {
-      print('Error sign in: $e');
+      print('Error sign in with Google: $e');
       return null;
     }
   }
 
+  // === GET USER DATA ===
   Future<UserModel?> getUserData(String uid) async {
     try {
       final doc = await _firestore.collection('users').doc(uid).get();
@@ -71,6 +130,7 @@ class AuthService {
     }
   }
 
+  // === LOGOUT ===
   Future<void> signOut() async {
     await _googleSignIn.signOut();
     await _auth.signOut();

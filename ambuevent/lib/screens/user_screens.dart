@@ -149,7 +149,17 @@ class HistoryScreen extends StatelessWidget {
 // --- Menu/Profile Screen ---
 class MenuScreen extends StatelessWidget {
   final VoidCallback onLogout;
-  const MenuScreen({super.key, required this.onLogout});
+  final String userName;
+  final String userEmail;
+  final String userPhoto;
+
+  const MenuScreen({
+    super.key,
+    required this.onLogout,
+    this.userName = 'Pengguna',
+    this.userEmail = '',
+    this.userPhoto = '',
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -175,14 +185,28 @@ class MenuScreen extends StatelessWidget {
                     children: [
                       Container(
                         width: 70, height: 70,
-                        decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(8)),
-                        child: const Icon(Icons.person, size: 40, color: Colors.grey),
+                        decoration: BoxDecoration(
+                          color: Colors.grey.shade200,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        // Tampilkan foto Google jika ada
+                        child: userPhoto.isNotEmpty
+                            ? ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.network(
+                                  userPhoto,
+                                  fit: BoxFit.cover,
+                                  errorBuilder: (_, __, ___) =>
+                                      const Icon(Icons.person, size: 40, color: Colors.grey),
+                                ),
+                              )
+                            : const Icon(Icons.person, size: 40, color: Colors.grey),
                       ),
                       const SizedBox(height: 8),
-                      const Text("Rafi Putra", style: TextStyle(fontWeight: FontWeight.bold)),
-                      const Text("rafi@gmail.com", style: TextStyle(fontSize: 10, color: Colors.grey)),
+                      Text(userName, style: const TextStyle(fontWeight: FontWeight.bold)),
+                      Text(userEmail, style: const TextStyle(fontSize: 10, color: Colors.grey)),
                     ],
-                  )
+                  ),
                 ],
               ),
             ),
@@ -195,13 +219,17 @@ class MenuScreen extends StatelessWidget {
                   _menuItem(Icons.person, "My Profile"),
                   _menuItem(Icons.settings, "Settings"),
                   ListTile(
-                    leading: Container(padding: const EdgeInsets.all(8), decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle), child: const Icon(Icons.logout, color: Colors.white, size: 16)),
+                    leading: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(color: Colors.grey, shape: BoxShape.circle),
+                      child: const Icon(Icons.logout, color: Colors.white, size: 16),
+                    ),
                     title: const Text("Logout", style: TextStyle(fontWeight: FontWeight.bold)),
                     onTap: onLogout,
-                  )
+                  ),
                 ],
               ),
-            )
+            ),
           ],
         ),
       ),
@@ -210,9 +238,19 @@ class MenuScreen extends StatelessWidget {
 
   Widget _menuItem(IconData icon, String title, {String? badge}) {
     return ListTile(
-      leading: Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle), child: Icon(icon, color: Colors.black, size: 18)),
+      leading: Container(
+        padding: const EdgeInsets.all(8),
+        decoration: BoxDecoration(color: Colors.grey.shade100, shape: BoxShape.circle),
+        child: Icon(icon, color: Colors.black, size: 18),
+      ),
       title: Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-      trailing: badge != null ? Container(padding: const EdgeInsets.all(6), decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle), child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10))) : null,
+      trailing: badge != null
+          ? Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(color: Colors.orange, shape: BoxShape.circle),
+              child: Text(badge, style: const TextStyle(color: Colors.white, fontSize: 10)),
+            )
+          : null,
     );
   }
 }
