@@ -56,7 +56,7 @@ class HomeScreen extends StatelessWidget {
                   child: const Row(children: [
                     Icon(Icons.location_on, color: Colors.red),
                     SizedBox(width: 10),
-                    Text("PSC 119 - Event Coverage", style: TextStyle(fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
+                    Text("Dinkes Kab. Madiun", style: TextStyle(fontWeight: FontWeight.bold, fontStyle: FontStyle.italic)),
                   ]),
                 ),
               )
@@ -86,7 +86,7 @@ class HomeScreen extends StatelessWidget {
   Widget _buildIdleContent() {
     return Column(
       children: [
-        const Icon(Icons.airport_shuttle_outlined, size: 80, color: Colors.red),
+        const Icon(Icons.medical_services_outlined, size: 80, color: Colors.red),
         const SizedBox(height: 10),
         Text(role == 'admin' ? "Dashboard Admin" : "Booking Event", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
         const SizedBox(height: 20),

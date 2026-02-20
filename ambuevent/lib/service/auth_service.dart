@@ -36,41 +36,42 @@ class AuthService {
 
   // === REGISTER DENGAN EMAIL & PASSWORD ===
   Future<UserModel?> registerWithEmail(
-    String email,
-    String password,
-    String name,
-  ) async {
-    try {
-      final UserCredential result = await _auth.createUserWithEmailAndPassword(
-        email: email,
-        password: password,
-      );
-      final User? user = result.user;
-      if (user == null) return null;
+  String email,
+  String password,
+  String name,
+) async {
+  try {
+    final UserCredential result = await _auth.createUserWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
+    final User? user = result.user;
+    if (user == null) return null;
 
-      // Update display name
-      await user.updateDisplayName(name);
+    // Tentukan role
+    final String role = _adminEmails.contains(email) ? 'admin' : 'user';
 
-      // Tentukan role
-      final String role = _adminEmails.contains(email) ? 'admin' : 'user';
+    // Simpan ke Firestore DULU (saat user masih ter-autentikasi)
+    final newUser = UserModel(
+      uid: user.uid,
+      email: email,
+      name: name,
+      photoUrl: '',
+      role: role,
+      createdAt: DateTime.now(),
+    );
+    await _firestore.collection('users').doc(user.uid).set(newUser.toMap());
 
-      // Simpan ke Firestore
-      final newUser = UserModel(
-        uid: user.uid,
-        email: email,
-        name: name,
-        photoUrl: '',
-        role: role,
-        createdAt: DateTime.now(),
-      );
-      await _firestore.collection('users').doc(user.uid).set(newUser.toMap());
+    // Update display name SETELAH data tersimpan
+    await user.updateDisplayName(name);
+    await user.reload();
 
-      return newUser;
-    } catch (e) {
-      print('Error register: $e');
-      return null;
-    }
+    return newUser;
+  } catch (e) {
+    print('Error register: $e');
+    return null;
   }
+}
 
   // === LOGIN DENGAN GOOGLE ===
   Future<UserModel?> signInWithGoogle() async {

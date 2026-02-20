@@ -109,22 +109,6 @@ class _MainAppControllerState extends State<MainAppController> {
   final TextEditingController _eventDateController = TextEditingController();
   final TextEditingController _eventLocController = TextEditingController();
 
-  // Mock Data
-  List<Map<String, dynamic>> historyList = [
-    {'id': 1, 'date': '20 Mar 2026', 'eventName': 'Konser Musik Jazz', 'type': 'Konser', 'status': 'Terkonfirmasi', 'driver': 'Budi Supir', 'plate': 'B 1234 PSC'},
-    {'id': 2, 'date': '15 Feb 2026', 'eventName': 'Marathon Jakarta', 'type': 'Olahraga', 'status': 'Selesai', 'driver': 'Joko', 'plate': 'B 9999 DAR'},
-  ];
-
-  List<Map<String, dynamic>> usersList = [
-    {'id': 1, 'name': 'Budi Supir', 'email': 'budi@psc.com', 'role': 'admin'},
-    {'id': 2, 'name': 'Rafi Putra', 'email': 'rafi@gmail.com', 'role': 'user'},
-  ];
-
-  List<Map<String, dynamic>> ambulancesList = [
-    {'id': 1, 'plate': 'B 1234 PSC', 'driver': 'Budi Supir', 'status': 'Tersedia'},
-    {'id': 2, 'plate': 'B 9999 DAR', 'driver': 'Joko', 'status': 'Booked Event'},
-  ];
-
   @override
   void initState() {
     super.initState();
@@ -228,13 +212,17 @@ class _MainAppControllerState extends State<MainAppController> {
         children: [
           _buildScreen(),
           if (['home', 'map', 'history', 'menu'].contains(currentScreen))
-            Positioned(
-              bottom: 0, left: 0, right: 0,
-              child: BottomNav(
-                currentScreen: currentScreen,
-                onTab: (screen) => setState(() => currentScreen = screen),
-              ),
-            ),
+  Positioned(
+    bottom: 0,  // tetap 0
+    left: 0,
+    right: 0,
+    child: SafeArea(  // ← tambah SafeArea
+      child: BottomNav(
+        currentScreen: currentScreen,
+        onTab: (screen) => setState(() => currentScreen = screen),
+      ),
+    ),
+  ),
         ],
       ),
     );
@@ -278,7 +266,10 @@ class _MainAppControllerState extends State<MainAppController> {
           onCancel: cancelBooking,
         );
       case 'history':
-        return HistoryScreen(history: historyList);
+  return HistoryScreen(
+    historyList: [],  // Sementara kosong, nanti kita sambungkan ke Firestore
+    onBack: () => setState(() => currentScreen = 'home'),
+  );
       case 'menu':
         return MenuScreen(
           onLogout: handleLogout,
@@ -287,19 +278,13 @@ class _MainAppControllerState extends State<MainAppController> {
           userPhoto: _currentUser?.photoUrl ?? '',
         );
       case 'adminUsers':
-        return AdminUserScreen(
-          users: usersList,
-          onBack: () => setState(() => currentScreen = 'home'),
-          onAdd: addUser,
-          onDelete: deleteUser,
-        );
-      case 'adminAmbulances':
-        return AdminAmbulanceScreen(
-          ambulances: ambulancesList,
-          onBack: () => setState(() => currentScreen = 'home'),
-          onAdd: addAmbulance,
-          onDelete: deleteAmbulance,
-        );
+  return AdminUserScreen(
+    onBack: () => setState(() => currentScreen = 'home'),
+  );
+case 'adminAmbulances':
+  return AdminAmbulanceScreen(
+    onBack: () => setState(() => currentScreen = 'home'),
+  );
       default:
         return const Center(child: Text("Screen not found"));
     }
