@@ -103,6 +103,11 @@ class _MainAppControllerState extends State<MainAppController> {
   String bookingState = 'idle';
   UserModel? _currentUser;
 
+  // ✅ FIX: Deklarasi list yang hilang
+  List<Map<String, dynamic>> historyList = [];
+  List<Map<String, dynamic>> usersList = [];
+  List<Map<String, dynamic>> ambulancesList = [];
+
   // Data State
   String eventType = 'Konser';
   final TextEditingController _eventNameController = TextEditingController();
@@ -152,8 +157,12 @@ class _MainAppControllerState extends State<MainAppController> {
           bookingState = 'booked';
           historyList.insert(0, {
             'id': DateTime.now().millisecondsSinceEpoch,
-            'date': _eventDateController.text.isEmpty ? 'Hari Ini' : _eventDateController.text,
-            'eventName': _eventNameController.text.isEmpty ? 'Event Baru' : _eventNameController.text,
+            'date': _eventDateController.text.isEmpty
+                ? 'Hari Ini'
+                : _eventDateController.text,
+            'eventName': _eventNameController.text.isEmpty
+                ? 'Event Baru'
+                : _eventNameController.text,
             'type': eventType,
             'status': 'Menunggu Konfirmasi',
             'driver': '-',
@@ -180,10 +189,14 @@ class _MainAppControllerState extends State<MainAppController> {
   }
 
   // --- CRUD Actions ---
-  void addUser(Map<String, dynamic> user) => setState(() => usersList.add(user));
-  void deleteUser(int id) => setState(() => usersList.removeWhere((u) => u['id'] == id));
-  void addAmbulance(Map<String, dynamic> amb) => setState(() => ambulancesList.add(amb));
-  void deleteAmbulance(int id) => setState(() => ambulancesList.removeWhere((a) => a['id'] == id));
+  void addUser(Map<String, dynamic> user) =>
+      setState(() => usersList.add(user));
+  void deleteUser(int id) =>
+      setState(() => usersList.removeWhere((u) => u['id'] == id));
+  void addAmbulance(Map<String, dynamic> amb) =>
+      setState(() => ambulancesList.add(amb));
+  void deleteAmbulance(int id) =>
+      setState(() => ambulancesList.removeWhere((a) => a['id'] == id));
 
   // Logout
   void handleLogout() async {
@@ -194,7 +207,6 @@ class _MainAppControllerState extends State<MainAppController> {
         bookingState = 'idle';
         _currentUser = null;
         userRole = 'user';
-        // Kembali ke welcome lalu login setelah 3 detik
         Future.delayed(const Duration(seconds: 3), () {
           if (mounted && currentScreen == 'welcome') {
             setState(() => currentScreen = 'login');
@@ -212,17 +224,17 @@ class _MainAppControllerState extends State<MainAppController> {
         children: [
           _buildScreen(),
           if (['home', 'map', 'history', 'menu'].contains(currentScreen))
-  Positioned(
-    bottom: 0,  // tetap 0
-    left: 0,
-    right: 0,
-    child: SafeArea(  // ← tambah SafeArea
-      child: BottomNav(
-        currentScreen: currentScreen,
-        onTab: (screen) => setState(() => currentScreen = screen),
-      ),
-    ),
-  ),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: SafeArea(
+                child: BottomNav(
+                  currentScreen: currentScreen,
+                  onTab: (screen) => setState(() => currentScreen = screen),
+                ),
+              ),
+            ),
         ],
       ),
     );
@@ -254,7 +266,8 @@ class _MainAppControllerState extends State<MainAppController> {
           dateCtrl: _eventDateController,
           locCtrl: _eventLocController,
           onGoToAdminUser: () => setState(() => currentScreen = 'adminUsers'),
-          onGoToAdminAmb: () => setState(() => currentScreen = 'adminAmbulances'),
+          onGoToAdminAmb: () =>
+              setState(() => currentScreen = 'adminAmbulances'),
           onGoToMap: () => setState(() => currentScreen = 'map'),
         );
       case 'map':
@@ -266,10 +279,10 @@ class _MainAppControllerState extends State<MainAppController> {
           onCancel: cancelBooking,
         );
       case 'history':
-  return HistoryScreen(
-    historyList: [],  // Sementara kosong, nanti kita sambungkan ke Firestore
-    onBack: () => setState(() => currentScreen = 'home'),
-  );
+        // ✅ FIX: Gunakan 'history' bukan 'historyList'
+        return HistoryScreen(
+          history: historyList,
+        );
       case 'menu':
         return MenuScreen(
           onLogout: handleLogout,
@@ -278,13 +291,13 @@ class _MainAppControllerState extends State<MainAppController> {
           userPhoto: _currentUser?.photoUrl ?? '',
         );
       case 'adminUsers':
-  return AdminUserScreen(
-    onBack: () => setState(() => currentScreen = 'home'),
-  );
-case 'adminAmbulances':
-  return AdminAmbulanceScreen(
-    onBack: () => setState(() => currentScreen = 'home'),
-  );
+        return AdminUserScreen(
+          onBack: () => setState(() => currentScreen = 'home'),
+        );
+      case 'adminAmbulances':
+        return AdminAmbulanceScreen(
+          onBack: () => setState(() => currentScreen = 'home'),
+        );
       default:
         return const Center(child: Text("Screen not found"));
     }
