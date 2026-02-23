@@ -12,6 +12,7 @@ import 'screens/auth_screens.dart';
 import 'screens/home_screen.dart';
 import 'screens/user_screens.dart';
 import 'screens/admin_screens.dart';
+import 'screens/map_screen.dart'; 
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -40,7 +41,6 @@ class MyApp extends StatelessWidget {
   }
 }
 
-// Cek status login dulu sebelum masuk app
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({super.key});
 
@@ -49,15 +49,12 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Masih loading
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const LoadingWidget(message: 'Memuat...');
         }
-        // Belum login → ke Welcome/Login
         if (!snapshot.hasData || snapshot.data == null) {
           return const MainAppController(isLoggedIn: false);
         }
-        // Sudah login → ambil data role dari Firestore
         return FutureBuilder<UserModel?>(
           future: AuthService().getUserData(snapshot.data!.uid),
           builder: (context, userSnapshot) {
@@ -68,7 +65,6 @@ class AuthWrapper extends StatelessWidget {
               AuthService().signOut();
               return const MainAppController(isLoggedIn: false);
             }
-            // Masuk app dengan role dari Firestore
             return MainAppController(
               isLoggedIn: true,
               initialRole: userSnapshot.data!.role,
@@ -103,12 +99,12 @@ class _MainAppControllerState extends State<MainAppController> {
   String bookingState = 'idle';
   UserModel? _currentUser;
 
-  // ✅ FIX: Deklarasi list yang hilang
+  // Data lists
   List<Map<String, dynamic>> historyList = [];
   List<Map<String, dynamic>> usersList = [];
   List<Map<String, dynamic>> ambulancesList = [];
 
-  // Data State
+  // Form controllers
   String eventType = 'Konser';
   final TextEditingController _eventNameController = TextEditingController();
   final TextEditingController _eventDateController = TextEditingController();
@@ -120,11 +116,9 @@ class _MainAppControllerState extends State<MainAppController> {
     _currentUser = widget.loggedInUser;
 
     if (widget.isLoggedIn) {
-      // Sudah login → langsung ke home
       currentScreen = 'home';
       userRole = widget.initialRole;
     } else {
-      // Belum login → mulai dari welcome
       currentScreen = 'welcome';
       userRole = 'user';
       Future.delayed(const Duration(seconds: 3), () {
@@ -133,6 +127,14 @@ class _MainAppControllerState extends State<MainAppController> {
         }
       });
     }
+  }
+
+  @override
+  void dispose() {
+    _eventNameController.dispose();
+    _eventDateController.dispose();
+    _eventLocController.dispose();
+    super.dispose();
   }
 
   // --- Actions ---
@@ -198,7 +200,7 @@ class _MainAppControllerState extends State<MainAppController> {
   void deleteAmbulance(int id) =>
       setState(() => ambulancesList.removeWhere((a) => a['id'] == id));
 
-  // Logout
+  // --- Logout ---
   void handleLogout() async {
     await AuthService().signOut();
     if (mounted) {
@@ -271,7 +273,7 @@ class _MainAppControllerState extends State<MainAppController> {
           onGoToMap: () => setState(() => currentScreen = 'map'),
         );
       case 'map':
-        return MapScreen(
+        return MapScreen( // ✅ Sekarang pakai MapScreen dari map_screen.dart
           bookingState: bookingState,
           eventName: _eventNameController.text,
           eventDate: _eventDateController.text,
@@ -279,10 +281,7 @@ class _MainAppControllerState extends State<MainAppController> {
           onCancel: cancelBooking,
         );
       case 'history':
-        // ✅ FIX: Gunakan 'history' bukan 'historyList'
-        return HistoryScreen(
-          history: historyList,
-        );
+        return HistoryScreen(history: historyList);
       case 'menu':
         return MenuScreen(
           onLogout: handleLogout,
