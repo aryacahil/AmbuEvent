@@ -65,7 +65,8 @@ class _AdminUserScreenState extends State<AdminUserScreen> {
                     border: OutlineInputBorder(),
                   ),
                   items: const [
-                    DropdownMenuItem(value: 'user', child: Text('User')),
+                    DropdownMenuItem(value: 'user', child: Text('User (Pelanggan)')),
+                    DropdownMenuItem(value: 'petugas', child: Text('Petugas Ambulance')),
                     DropdownMenuItem(value: 'admin', child: Text('Admin')),
                   ],
                   onChanged: (val) => setDialogState(() => selectedRole = val ?? 'user'),
@@ -105,8 +106,7 @@ class _AdminUserScreenState extends State<AdminUserScreen> {
                         );
 
                         if (userCred.user != null) {
-                          // Simpan ke Firestore (otomatis lewat auth_service)
-                          // Tapi kita update rolenya kalau admin
+                          // Simpan ke Firestore
                           await FirebaseFirestore.instance
                               .collection('users')
                               .doc(userCred.user!.uid)
@@ -193,7 +193,8 @@ class _AdminUserScreenState extends State<AdminUserScreen> {
                   border: OutlineInputBorder(),
                 ),
                 items: const [
-                  DropdownMenuItem(value: 'user', child: Text('User')),
+                  DropdownMenuItem(value: 'user', child: Text('User (Pelanggan)')),
+                  DropdownMenuItem(value: 'petugas', child: Text('Petugas Ambulance')),
                   DropdownMenuItem(value: 'admin', child: Text('Admin')),
                 ],
                 onChanged: (val) => setDialogState(() => selectedRole = val ?? 'user'),
@@ -320,14 +321,26 @@ class _AdminUserScreenState extends State<AdminUserScreen> {
                 margin: const EdgeInsets.only(bottom: 12),
                 child: ListTile(
                   leading: CircleAvatar(
-                    backgroundColor: u['role'] == 'admin' ? Colors.red.shade100 : Colors.blue.shade100,
+                    backgroundColor: u['role'] == 'admin'
+                        ? Colors.red.shade100
+                        : (u['role'] == 'petugas'
+                            ? Colors.orange.shade100
+                            : Colors.blue.shade100),
                     backgroundImage: u['photoUrl'] != null && u['photoUrl'].isNotEmpty
                         ? NetworkImage(u['photoUrl'])
                         : null,
                     child: u['photoUrl'] == null || u['photoUrl'].isEmpty
                         ? Icon(
-                            u['role'] == 'admin' ? Icons.shield : Icons.person,
-                            color: u['role'] == 'admin' ? Colors.red : Colors.blue,
+                            u['role'] == 'admin'
+                                ? Icons.shield
+                                : (u['role'] == 'petugas'
+                                    ? Icons.medical_services
+                                    : Icons.person),
+                            color: u['role'] == 'admin'
+                                ? Colors.red
+                                : (u['role'] == 'petugas'
+                                    ? Colors.orange
+                                    : Colors.blue),
                           )
                         : null,
                   ),
@@ -341,7 +354,11 @@ class _AdminUserScreenState extends State<AdminUserScreen> {
                           (u['role'] ?? 'user').toString().toUpperCase(),
                           style: const TextStyle(fontSize: 10, color: Colors.white),
                         ),
-                        backgroundColor: u['role'] == 'admin' ? Colors.red : Colors.blue,
+                        backgroundColor: u['role'] == 'admin'
+                            ? Colors.red
+                            : (u['role'] == 'petugas'
+                                ? Colors.orange
+                                : Colors.blue),
                       ),
                       IconButton(
                         onPressed: () => _showEditUserDialog(u),
@@ -363,7 +380,7 @@ class _AdminUserScreenState extends State<AdminUserScreen> {
   }
 }
 
-// === CRUD ARMADA dengan Firebase ===
+// === CRUD ARMADA dengan Petugas ===
 class AdminAmbulanceScreen extends StatefulWidget {
   final VoidCallback onBack;
 
@@ -376,50 +393,78 @@ class AdminAmbulanceScreen extends StatefulWidget {
 class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
   final FirestoreService _firestoreService = FirestoreService();
 
-  void _showAddDialog() {
+  void _showAddDialog() async {
     final plateController = TextEditingController();
-    final driverController = TextEditingController();
     String selectedStatus = 'Tersedia';
+    String? selectedPetugasId;
+
+    // Ambil daftar petugas dari Firestore
+    final petugasSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'petugas')
+        .get();
+
+    final petugasList = petugasSnapshot.docs.map((doc) {
+      return {
+        'id': doc.id,
+        'name': doc.data()['name'] ?? 'No Name',
+      };
+    }).toList();
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Tambah Armada'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: plateController,
-                decoration: const InputDecoration(
-                  labelText: 'Nomor Polisi',
-                  hintText: 'B 1234 ABC',
-                  border: OutlineInputBorder(),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: plateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor Polisi',
+                    hintText: 'B 1234 ABC',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: driverController,
-                decoration: const InputDecoration(
-                  labelText: 'Nama Supir',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedPetugasId,
+                  decoration: const InputDecoration(
+                    labelText: 'Petugas',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('-- Belum Ada Petugas --'),
+                    ),
+                    ...petugasList.map((p) => DropdownMenuItem(
+                          value: p['id'],
+                          child: Text(p['name']),
+                        )),
+                  ],
+                  onChanged: (val) => setDialogState(() => selectedPetugasId = val),
                 ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedStatus,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Tersedia', child: Text('Tersedia')),
+                    DropdownMenuItem(value: 'Maintenance', child: Text('Maintenance')),
+                    DropdownMenuItem(value: 'Booked Event', child: Text('Booked Event')),
+                  ],
+                  onChanged: (val) => setDialogState(() => selectedStatus = val ?? 'Tersedia'),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Tersedia', child: Text('Tersedia')),
-                  DropdownMenuItem(value: 'Maintenance', child: Text('Maintenance')),
-                  DropdownMenuItem(value: 'Booked Event', child: Text('Booked Event')),
-                ],
-                onChanged: (val) => setDialogState(() => selectedStatus = val ?? 'Tersedia'),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -428,10 +473,13 @@ class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
             ),
             ElevatedButton(
               onPressed: () async {
-                if (plateController.text.isNotEmpty && driverController.text.isNotEmpty) {
+                if (plateController.text.isNotEmpty) {
                   final success = await _firestoreService.addAmbulance({
                     'plate': plateController.text,
-                    'driver': driverController.text,
+                    'petugasId': selectedPetugasId,
+                    'petugasName': selectedPetugasId != null
+                        ? petugasList.firstWhere((p) => p['id'] == selectedPetugasId)['name']
+                        : null,
                     'status': selectedStatus,
                   });
 
@@ -455,49 +503,77 @@ class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
     );
   }
 
-  void _showEditDialog(Map<String, dynamic> ambulance) {
+  void _showEditDialog(Map<String, dynamic> ambulance) async {
     final plateController = TextEditingController(text: ambulance['plate']);
-    final driverController = TextEditingController(text: ambulance['driver']);
     String selectedStatus = ambulance['status'] ?? 'Tersedia';
+    String? selectedPetugasId = ambulance['petugasId'];
+
+    // Ambil daftar petugas dari Firestore
+    final petugasSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .where('role', isEqualTo: 'petugas')
+        .get();
+
+    final petugasList = petugasSnapshot.docs.map((doc) {
+      return {
+        'id': doc.id,
+        'name': doc.data()['name'] ?? 'No Name',
+      };
+    }).toList();
+
+    if (!mounted) return;
 
     showDialog(
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
           title: const Text('Edit Armada'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: plateController,
-                decoration: const InputDecoration(
-                  labelText: 'Nomor Polisi',
-                  border: OutlineInputBorder(),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: plateController,
+                  decoration: const InputDecoration(
+                    labelText: 'Nomor Polisi',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: driverController,
-                decoration: const InputDecoration(
-                  labelText: 'Nama Supir',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedPetugasId,
+                  decoration: const InputDecoration(
+                    labelText: 'Petugas',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: [
+                    const DropdownMenuItem(
+                      value: null,
+                      child: Text('-- Belum Ada Petugas --'),
+                    ),
+                    ...petugasList.map((p) => DropdownMenuItem(
+                          value: p['id'],
+                          child: Text(p['name']),
+                        )),
+                  ],
+                  onChanged: (val) => setDialogState(() => selectedPetugasId = val),
                 ),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                value: selectedStatus,
-                decoration: const InputDecoration(
-                  labelText: 'Status',
-                  border: OutlineInputBorder(),
+                const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: selectedStatus,
+                  decoration: const InputDecoration(
+                    labelText: 'Status',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'Tersedia', child: Text('Tersedia')),
+                    DropdownMenuItem(value: 'Maintenance', child: Text('Maintenance')),
+                    DropdownMenuItem(value: 'Booked Event', child: Text('Booked Event')),
+                  ],
+                  onChanged: (val) => setDialogState(() => selectedStatus = val ?? 'Tersedia'),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Tersedia', child: Text('Tersedia')),
-                  DropdownMenuItem(value: 'Maintenance', child: Text('Maintenance')),
-                  DropdownMenuItem(value: 'Booked Event', child: Text('Booked Event')),
-                ],
-                onChanged: (val) => setDialogState(() => selectedStatus = val ?? 'Tersedia'),
-              ),
-            ],
+              ],
+            ),
           ),
           actions: [
             TextButton(
@@ -510,7 +586,10 @@ class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
                   ambulance['id'],
                   {
                     'plate': plateController.text,
-                    'driver': driverController.text,
+                    'petugasId': selectedPetugasId,
+                    'petugasName': selectedPetugasId != null
+                        ? petugasList.firstWhere((p) => p['id'] == selectedPetugasId)['name']
+                        : null,
                     'status': selectedStatus,
                   },
                 );
@@ -630,14 +709,14 @@ class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
                         children: [
                           const Icon(Icons.person, size: 14, color: Colors.grey),
                           const SizedBox(width: 4),
-                          Text('Supir: ${a['driver'] ?? '-'}'),
+                          Text('Petugas: ${a['petugasName'] ?? 'Belum ada'}'),
                         ],
                       ),
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                         decoration: BoxDecoration(
-                          color: statusColor.withOpacity(0.1),
+                          color: statusColor.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(color: statusColor),
                         ),
