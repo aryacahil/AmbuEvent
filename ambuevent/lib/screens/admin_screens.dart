@@ -59,7 +59,7 @@ class _AdminUserScreenState extends State<AdminUserScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedRole,
+                  initialValue: selectedRole,
                   decoration: const InputDecoration(
                     labelText: 'Role',
                     border: OutlineInputBorder(),
@@ -187,7 +187,7 @@ class _AdminUserScreenState extends State<AdminUserScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
-                value: selectedRole,
+                initialValue: selectedRole,
                 decoration: const InputDecoration(
                   labelText: 'Role',
                   border: OutlineInputBorder(),
@@ -432,7 +432,7 @@ class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedPetugasId,
+                  initialValue: selectedPetugasId,
                   decoration: const InputDecoration(
                     labelText: 'Petugas',
                     border: OutlineInputBorder(),
@@ -451,7 +451,7 @@ class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedStatus,
+                  initialValue: selectedStatus,
                   decoration: const InputDecoration(
                     labelText: 'Status',
                     border: OutlineInputBorder(),
@@ -541,7 +541,7 @@ class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedPetugasId,
+                  initialValue: selectedPetugasId,
                   decoration: const InputDecoration(
                     labelText: 'Petugas',
                     border: OutlineInputBorder(),
@@ -560,7 +560,7 @@ class _AdminAmbulanceScreenState extends State<AdminAmbulanceScreen> {
                 ),
                 const SizedBox(height: 12),
                 DropdownButtonFormField<String>(
-                  value: selectedStatus,
+                  initialValue: selectedStatus,
                   decoration: const InputDecoration(
                     labelText: 'Status',
                     border: OutlineInputBorder(),

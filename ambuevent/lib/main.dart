@@ -12,7 +12,8 @@ import 'screens/auth_screens.dart';
 import 'screens/home_screen.dart';
 import 'screens/user_screens.dart';
 import 'screens/admin_screens.dart';
-import 'screens/map_screen.dart'; 
+import 'screens/map_screen.dart';
+import 'screens/petugas_screen.dart'; // ← TAMBAH INI
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -65,14 +66,52 @@ class AuthWrapper extends StatelessWidget {
               AuthService().signOut();
               return const MainAppController(isLoggedIn: false);
             }
+
+            final user = userSnapshot.data!;
+
+            // ── PETUGAS → langsung ke halaman khusus petugas ──
+            if (user.role == 'petugas') {
+              return _PetugasEntryPoint(user: user);
+            }
+
             return MainAppController(
               isLoggedIn: true,
-              initialRole: userSnapshot.data!.role,
-              loggedInUser: userSnapshot.data!,
+              initialRole: user.role,
+              loggedInUser: user,
             );
           },
         );
       },
+    );
+  }
+}
+
+// Widget entrypoint untuk petugas agar bisa handle logout
+class _PetugasEntryPoint extends StatefulWidget {
+  final UserModel user;
+  const _PetugasEntryPoint({required this.user});
+
+  @override
+  State<_PetugasEntryPoint> createState() => _PetugasEntryPointState();
+}
+
+class _PetugasEntryPointState extends State<_PetugasEntryPoint> {
+  bool _loggingOut = false;
+
+  Future<void> _handleLogout() async {
+    setState(() => _loggingOut = true);
+    await AuthService().signOut();
+    // AuthWrapper akan otomatis rebuild karena authStateChanges stream
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loggingOut) {
+      return const LoadingWidget(message: 'Keluar...');
+    }
+    return PetugasHomeWrapper(
+      petugasUser: widget.user,
+      onLogout: _handleLogout,
     );
   }
 }
@@ -139,6 +178,8 @@ class _MainAppControllerState extends State<MainAppController> {
 
   // --- Actions ---
   void handleLogin(String role, {UserModel? user}) {
+    // Jika petugas login lewat login screen, arahkan ke PetugasHomeWrapper
+    // Ini ditangani oleh AuthWrapper via stream, tapi kita tetap set state
     setState(() {
       userRole = role;
       _currentUser = user;
@@ -273,7 +314,7 @@ class _MainAppControllerState extends State<MainAppController> {
           onGoToMap: () => setState(() => currentScreen = 'map'),
         );
       case 'map':
-        return MapScreen( // ✅ Sekarang pakai MapScreen dari map_screen.dart
+        return MapScreen(
           bookingState: bookingState,
           eventName: _eventNameController.text,
           eventDate: _eventDateController.text,
