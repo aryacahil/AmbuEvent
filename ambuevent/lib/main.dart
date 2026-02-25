@@ -13,7 +13,7 @@ import 'screens/home_screen.dart';
 import 'screens/user_screens.dart';
 import 'screens/admin_screens.dart';
 import 'screens/map_screen.dart';
-import 'screens/petugas_screen.dart'; // ← TAMBAH INI
+import 'screens/petugas_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -149,6 +149,9 @@ class _MainAppControllerState extends State<MainAppController> {
   final TextEditingController _eventDateController = TextEditingController();
   final TextEditingController _eventLocController = TextEditingController();
 
+  // Upload dokumen (simpan nama file)
+  List<String> _uploadedDocNames = [];
+
   @override
   void initState() {
     super.initState();
@@ -227,6 +230,7 @@ class _MainAppControllerState extends State<MainAppController> {
       _eventNameController.clear();
       _eventDateController.clear();
       _eventLocController.clear();
+      _uploadedDocNames = [];
       currentScreen = 'home';
     });
   }
@@ -312,6 +316,11 @@ class _MainAppControllerState extends State<MainAppController> {
           onGoToAdminAmb: () =>
               setState(() => currentScreen = 'adminAmbulances'),
           onGoToMap: () => setState(() => currentScreen = 'map'),
+          onGoToAdminKegiatan: () =>
+              setState(() => currentScreen = 'adminKegiatan'),
+          uploadedDocNames: _uploadedDocNames,
+          onDocumentsChanged: (docs) =>
+              setState(() => _uploadedDocNames = docs),
         );
       case 'map':
         return MapScreen(
@@ -336,6 +345,10 @@ class _MainAppControllerState extends State<MainAppController> {
         );
       case 'adminAmbulances':
         return AdminAmbulanceScreen(
+          onBack: () => setState(() => currentScreen = 'home'),
+        );
+      case 'adminKegiatan':
+        return AdminKegiatanScreen(
           onBack: () => setState(() => currentScreen = 'home'),
         );
       default:

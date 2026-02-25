@@ -248,11 +248,15 @@ class _PetugasDashboardScreenState extends State<PetugasDashboardScreen> {
                       child: const Row(
                         children: [
                           Icon(Icons.warning_amber_rounded,
-                              color: Colors.white70),
-                          SizedBox(width: 10),
-                          Text(
-                            'Belum ada armada yang di-assign ke Anda.',
-                            style: TextStyle(color: Colors.white70),
+                              color: Colors.white70, size: 18),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Belum ada armada yang di-assign ke Anda.',
+                              style: TextStyle(color: Colors.white70, fontSize: 13),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                           ),
                         ],
                       ),
@@ -297,7 +301,7 @@ class _PetugasDashboardScreenState extends State<PetugasDashboardScreen> {
                                 horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
                               color: _statusColor(_myAmbulance!['status'])
-                                  .withOpacity(0.15),
+                                  .withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(20),
                               border: Border.all(
                                   color: _statusColor(
@@ -531,7 +535,7 @@ class _PetugasDashboardScreenState extends State<PetugasDashboardScreen> {
                   padding: const EdgeInsets.symmetric(
                       horizontal: 8, vertical: 3),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.12),
+                    color: statusColor.withValues(alpha: 0.12),
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(status,
@@ -1061,13 +1065,13 @@ class _PetugasMapScreenState extends State<PetugasMapScreen> {
           height: 40,
           decoration: BoxDecoration(
             color: _isSharing
-                ? Colors.green.withOpacity(0.25)
-                : Colors.blue.withOpacity(0.2),
+                ? Colors.green.withValues(alpha: 0.25)
+                : Colors.blue.withValues(alpha: 0.2),
             shape: BoxShape.circle,
             border: Border.all(
                 color: _isSharing
-                    ? Colors.green.withOpacity(0.6)
-                    : Colors.blue.withOpacity(0.5),
+                    ? Colors.green.withValues(alpha: 0.6)
+                    : Colors.blue.withValues(alpha: 0.5),
                 width: 2),
           ),
         ),
